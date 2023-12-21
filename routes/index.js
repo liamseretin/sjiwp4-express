@@ -1,12 +1,23 @@
 const express = require("express");
 const router = express.Router();
-const {checkoutCookie}= require("..//services/auth.js");
+const { checkAuthCookie } = require("../services/auth.js");
+
 // GET /
 router.get("/", function(req, res, next) {
   res.render("index");
 });
 
-router.get("/protected", function(req, res, next) {
+router.get("/protected", checkAuthCookie, function(req, res, next) {
+
+if (req.user) {
+
+
+  console.log("USERS SIGNED IN"); 
+} else {
+  res.send("NO USER");
+}
+
+
   res.send("done");
 });
 
