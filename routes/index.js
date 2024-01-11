@@ -9,9 +9,13 @@ router.get("/", function (req, res, next) {
 
 router.get("/protected", checkAuthCookie, function (req, res, next) {
 
-  console.log("USER", req.user);
+  if (req.user) {
+    console.log("USER SIGNED IN");
+  } else {
+    console.log("NO USER");
+  }
 
-  res.send("done");
+  res.send("DONE");
 });
 
 module.exports = router;
