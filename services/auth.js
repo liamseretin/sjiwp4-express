@@ -1,5 +1,6 @@
 const JWT_SECRET_KEY = process.env.JWT_SECRET_KEY;
 
+const { parse } = require("dotenv");
 const jwt = require("jsonwebtoken");
 
 function getUserJwt(id, email, name, role, expDays = 7) {
@@ -20,23 +21,28 @@ function getUserJwt(id, email, name, role, expDays = 7) {
     return token;
 }
 
-// MIDDLEWARE FOR AUTH COOKIE CHECK
-function checkAuthCookie(req, res, next) {
-    const token = req.cookies["auth"];
-
-    let result = null;
-    try {
-        result = jwt.verify(token, JWT_SECRET_KEY);
-    } catch (error) {
-        console.log("ERROR", error);
+// MIDDLEWARE FOR AUTHENTICATION CHECK
+function authRequired(req, res, next) {
+if (!req.user) throw new Error("Potrebna je prijava u sustav");
+    next();
+}
+// MIDDLEWARE FOR PARSING AUTH COOKIE CHECK
+    function parseAuthCookie(req, res, next) {
+        const token = req.cookies[process.env.AUTH_COOKIE_NAME];
+        let result = null;
+        try{
+            result=jwt.verify(token, JWT_SECRET_KEY);
+        } catch (error) {
+            next();
+            return;
+        }
+        req.user = result;
+        res.locals.user = result;
         next();
     }
 
-    req.user = result;
-    next();
-}
-
 module.exports = {
     getUserJwt,
-    checkAuthCookie
+    authRequired,
+    parseAuthCookie
 };
