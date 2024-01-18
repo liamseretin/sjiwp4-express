@@ -16,7 +16,6 @@ router.get("/signin", function (req, res, next) {
   res.render("users/signin", { result: { display_form: true } });
 });
 
-
 // SCHEMA signin
 const schema_signin = Joi.object({
   email: Joi.string().email().max(50).required(),
@@ -85,7 +84,6 @@ router.post("/signup", function (req, res, next) {
   }
 
   const passwordHash = bcrypt.hashSync(req.body.password, 10);
-
   const stmt2 = db.prepare("INSERT INTO users (email, password, name, signed_at, role) VALUES (?, ?, ?, ?, ?);");
   const insertResult = stmt2.run(req.body.email, passwordHash, req.body.name, Date.now(), "user");
 
