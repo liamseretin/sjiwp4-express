@@ -1,5 +1,5 @@
 <div class="p-2">
-    {{#if user.is_admin}}
+    {{#if user.is_admin }}
     <a href="/competitions/add" class="btn btn-primary">Novo natjecanje</a>
     {{/if}}
 
@@ -18,7 +18,6 @@
             </thead>
             <!-- body -->
             <tbody>
-
                 {{#each result.items}}
                 <tr>
                     <th>{{this.id}}</th>
@@ -33,8 +32,11 @@
                     </td>
                     <td>{{this.author}}</td>
                     <td class="flex flex-wrap gap-2">
+                        <a href="/competitions/application/{{this.id}}" class="btn btn-error btn-xs">Prijava</a>
+                        {{#if ../user.is_admin }}
                         <a href="/competitions/edit/{{this.id}}" class="btn btn-accent btn-xs">Uredi</a>
                         <a href="/competitions/delete/{{this.id}}" class="btn btn-error btn-xs">Briši</a>
+                        {{/if}}
                     </td>
                 </tr>
                 {{/each}}

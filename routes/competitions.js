@@ -67,23 +67,23 @@ const schema_edit = Joi.object({
     apply_till: Joi.date().iso().required()
 });
 
-// GET /competitions/edit
+// POST /competitions/edit
 router.post("/edit", adminRequired, function (req, res, next) {
     // do validation
-    const result = schema_add.validate(req.body);
+    const result = schema_edit.validate(req.body);
     if (result.error) {
         res.render("competitions/form", { result: { validation_error: true, display_form: true } });
         return;
     }
-    const stmt = db.prepare("UPDATE competitions SET name = ?, description = ?, apply_till = ? WHERE id = ?;");
-    const updateResult = stmt.run(req.body.name, req.body.description, req.body.apply_till, req.body.id)
 
-    if (insertResult.changes && insertResult.changes === 1) {
+    const stmt = db.prepare("UPDATE competitions SET name = ?, description = ?, apply_till = ? WHERE id = ?;");
+    const updateResult = stmt.run(req.body.name, req.body.description, req.body.apply_till, req.body.id);
+
+    if (updateResult.changes && updateResult.changes === 1) {
         res.redirect("/competitions");
     } else {
         res.render("competitions/form", { result: { database_error: true } });
     }
-
 });
 
 // GET /competitions/add
