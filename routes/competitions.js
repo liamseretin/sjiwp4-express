@@ -117,4 +117,13 @@ router.post("/add", adminRequired, function (req, res, next) {
     }
 });
 
+// GET /competitions/login/:id
+router.get("/login/:id", function (req, res, next) {
+    // do validation
+    const result = schema_id.validate(req.params);
+    const stmt = db.prepare("SELECT * FROM login WHERE id = ?;");
+    const selectResult = stmt.get(req.params.id);
+
+});
+
 module.exports = router;
