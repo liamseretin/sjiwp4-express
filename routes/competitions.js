@@ -1,13 +1,13 @@
 const express = require("express");
 const router = express.Router();
-const { authRequired, adminRequired } = require("../services/auth.js");
+const { authRequired, adminRequired, checkEmailUnique } = require("../services/auth.js");
 const Joi = require("joi");
 const { db } = require("../services/db.js");
 
 // GET /competitions
 router.get("/", authRequired, function (req, res, next) {
     const stmt = db.prepare(`
-        SELECT c.id, c.name, c.description, u.name AS author, c.apply_till
+        SELECT c.id, c.name, c.description, u.name AS author, c.apply_till 
         FROM competitions c, users u
         WHERE c.author_id = u.id
         ORDER BY c.apply_till
@@ -31,13 +31,15 @@ router.get("/delete/:id", adminRequired, function (req, res, next) {
         throw new Error("Neispravan poziv");
     }
 
+    const stmt1 = db.prepare("DELETE FROM apply WHERE id_natjecanje=?;");
+    const deleteResult1 = stmt1.run(req.params.id);
+    
     const stmt = db.prepare("DELETE FROM competitions WHERE id = ?;");
     const deleteResult = stmt.run(req.params.id);
 
     if (!deleteResult.changes || deleteResult.changes !== 1) {
         throw new Error("Operacija nije uspjela");
     }
-
     res.redirect("/competitions");
 });
 
@@ -48,7 +50,6 @@ router.get("/edit/:id", adminRequired, function (req, res, next) {
     if (result.error) {
         throw new Error("Neispravan poziv");
     }
-
     const stmt = db.prepare("SELECT * FROM competitions WHERE id = ?;");
     const selectResult = stmt.get(req.params.id);
 
@@ -66,8 +67,7 @@ const schema_edit = Joi.object({
     description: Joi.string().min(3).max(1000).required(),
     apply_till: Joi.date().iso().required()
 });
-
-// POST /competitions/edit
+// GET /competitions/edit
 router.post("/edit", adminRequired, function (req, res, next) {
     // do validation
     const result = schema_edit.validate(req.body);
@@ -117,40 +117,134 @@ router.post("/add", adminRequired, function (req, res, next) {
     }
 });
 
-// GET /competitions/login/:id
-router.get("/login/:id", function (req, res, next) {
+// GET /competitions/apply/:id
+router.get("/apply/:id", function (req, res, next) {
+
     // do validation
     const result = schema_id.validate(req.params);
     if (result.error) {
         throw new Error("Neispravan poziv");
     }
-    // PROVJERA JE LI KORISNIK UPISAN
-    const checkStmt = db.prepare("SELECT count(*) FROM login WHERE id_user = ? AND id_competition = ?;");
-    const checkResult = checkStmt.get(req.user.sub, req.params.id);
-    console.log(checkResult);
-    if (checkResult1["count(*)"] >= 1) {
-        res.render("competitions/form", { result: { database_error: true } });
-    }   
+    const stmt1 = db.prepare("SELECT * FROM apply WHERE id_korisnik =? AND id_natjecanje = ?;");
+    const selectResult = stmt1.all(req.user.sub, req.params.id);
+
+    if (selectResult.length > 0) {
+        throw new Error("Već ste prijavljeni!");
+    }
     else {
-        // UPIS U BAZU
-        const stmt = db.prepare("INSERT INTO login (id_user, id_competition) VALUES (?, ?);");
-        const updateResult = stmt.run(req.user.sub, req.params.id);
-        if (updateResult.changes && updateResult.changes === 1) {
-            res.render("competitions/login", { result: { items: result } });
+
+        const stmt = db.prepare("INSERT INTO apply (id_korisnik, id_natjecanje) VALUES (?, ?);");
+        const insertResult = stmt.run(req.user.sub, req.params.id);
+
+        if (insertResult.changes && insertResult.changes === 1) {
+            res.render("competitions/form", { result: { success: true } });
         } else {
             res.render("competitions/form", { result: { database_error: true } });
         }
     }
 });
 
-// GET /competitions/login/:id
-router.get("/apply/:id", function (req, res, next) {
-    res.render("competitions/apply")
+// GET /competitions/applied/:id
+router.get("/applied/:id", adminRequired, function (req, res, next) {
+    // do validation
+    const result1 = schema_id.validate(req.params);
+    if (result1.error) {
+        throw new Error("Neispravan poziv");
+    }
+
+    const stmt = db.prepare(`
+    SELECT a.id, c.name as compName, u.name as korisnik, a.bodovi
+    FROM apply a, competitions c, users u
+    WHERE a.id_natjecanje = c.id and a.id_korisnik = u.id and c.id = ?
+    ORDER BY a.bodovi DESC
+    `);
+
+    const result = stmt.all(req.params.id);
+    console.log(result);
+
+    res.render("competitions/apply", { result: { items: result } });
+
+});
+// GET /competitions/bodovi/:id
+router.get("/bodovi/:id", adminRequired, function (req, res, next) {
+    // do validation
+    const result = schema_id.validate(req.params);
+    if (result.error) {
+        throw new Error("Neispravan poziv");
+    }
+
+    const stmt = db.prepare("SELECT * FROM apply WHERE id = ?;");
+    const selectResult = stmt.get(req.params.id);
+
+    if (!selectResult) {
+        throw new Error("Neispravan poziv");
+    }
+
+    res.render("competitions/bodovi", { result: { display_form: true, bodovi: selectResult } });
+});
+// SCHEMA bodovi
+const schema_bodovi = Joi.object({
+    id: Joi.number().integer().positive().required(),
+    bodovi: Joi.number().min(1).max(50).required()
 });
 
-// GET /competitions/lista
-router.get("/lista", adminRequired, function (req, res, next) {
-    res.render("competitions/form", { result: { display_form: true } });
+
+// POST /competitions/bodovi
+router.post("/bodovi", adminRequired, function (req, res, next) {
+    // do validation
+    const result = schema_bodovi.validate(req.body);
+    console.log(result);
+    if (result.error) {
+        throw new Error("Neispravan poziv");
+    }
+
+    const stmt = db.prepare("UPDATE apply SET bodovi = ? WHERE id = ?");
+    const insertResult = stmt.run(req.body.bodovi, req.body.id);
+
+    if (insertResult.changes && insertResult.changes === 1) {
+        res.redirect("/competitions/applied/" + req.body.id);
+    } else {
+        res.render("competitions/apply", { result: { database_error: true } });
+    }
+});
+
+// GET /competitions/ispis/:id
+router.get("/ispis/:id", adminRequired, function (req, res, next) {
+    // do validation
+    const result1 = schema_id.validate(req.params);
+    if (result1.error) {
+        throw new Error("Neispravan poziv");
+    }
+
+    const stmt = db.prepare(`
+    SELECT a.id, c.name as compName, u.name as korisnik, a.bodovi
+    FROM apply a, competitions c, users u
+    WHERE a.id_natjecanje = c.id and a.id_korisnik = u.id and c.id = ?
+    ORDER BY a.bodovi DESC
+    `);
+
+    const result = stmt.all(req.params.id);
+    console.log(result);
+
+    res.render("competitions/ispis", { result: { items: result } });
+
+});
+
+// GET /competitions/applied/delete/:id
+router.get("/deleteuser/:id", adminRequired, function (req, res, next) {
+    // do validation
+    const result = schema_id.validate(req.params);
+    if (result.error) {
+        throw new Error("Neispravan poziv");
+    }
+   
+    const stmt = db.prepare("DELETE FROM competitions WHERE id = ?;");
+    const deleteResult = stmt.run(req.params.id);
+
+    if (!deleteResult.changes || deleteResult.changes !== 1) {
+        throw new Error("Operacija nije uspjela");
+    }
+    res.redirect("/competitions");
 });
 
 module.exports = router;

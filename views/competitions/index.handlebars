@@ -1,5 +1,5 @@
 <div class="p-2">
-    {{#if user.is_admin }}
+    {{#if user.is_admin}}
     <a href="/competitions/add" class="btn btn-primary">Novo natjecanje</a>
     {{/if}}
 
@@ -8,7 +8,6 @@
             <!-- head -->
             <thead>
                 <tr>
-                    <th>ID</th>
                     <th>Ime</th>
                     <th>Opis</th>
                     <th>Rok prijave</th>
@@ -18,9 +17,9 @@
             </thead>
             <!-- body -->
             <tbody>
+
                 {{#each result.items}}
                 <tr>
-                    <th>{{this.id}}</th>
                     <td>{{this.name}}</td>
                     <td>
                         <div class="line-clamp-2">
@@ -33,10 +32,11 @@
                     <td>{{this.author}}</td>
                     <td class="flex flex-wrap gap-2">
                         <a href="/competitions/apply/{{this.id}}" class="btn btn-accent btn-xs">Prijava</a>
-                        {{#if ../user.is_admin }} 
-                        <a href="/competitions/lista/{{this.id}}" class="btn btn-accent btn-xs">Lista prijavljenih</a>
+                        {{#if ../user.is_admin}}
+                        <a href="/competitions/applied/{{this.id}}" class="btn btn-accent btn-xs">Rezultati</a>
                         <a href="/competitions/edit/{{this.id}}" class="btn btn-accent btn-xs">Uredi</a>
-                        <a href="/competitions/delete/{{this.id}}" class="btn btn-error btn-xs">Briši</a>
+                        <a href="/competitions/delete/{{this.id}}" class="btn btn-error btn-xs">Obriši</a>
+                        <a href="/competitions/ispis/{{this.id}}" class="btn btn-accent btn-xs">Ispis</a>
                         {{/if}}
                     </td>
                 </tr>
